@@ -1,11 +1,10 @@
 {
-  "name": "evomind-ai-backend",
+  "name": "evomind-ai-server",
   "version": "1.0.0",
   "description": "EvoMind AI learning companion backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

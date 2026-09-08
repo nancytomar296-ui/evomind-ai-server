@@ -2,24 +2,21 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const OpenAI = require("openai");
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+app.use(cors());
+app.use(express.json());
+
+// OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-app.use(cors());
-app.use(express.json());
-
-/* --------------------------------
-   HEALTH CHECK
--------------------------------- */
-
+// Health check
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
@@ -27,10 +24,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-/* --------------------------------
-   AI CHAT
--------------------------------- */
-
+// AI Mentor
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
@@ -44,38 +38,46 @@ app.post("/api/chat", async (req, res) => {
 
     const safeHistory = Array.isArray(history)
       ? history
-          .filter(item => item && item.role && item.content)
+          .filter(item => {
+            return (
+              item &&
+              (item.role === "user" || item.role === "assistant") &&
+              item.content
+            );
+          })
           .slice(-10)
           .map(item => ({
-            role: item.role === "assistant" ? "assistant" : "user",
+            role: item.role,
             content: String(item.content).slice(0, 4000)
           }))
       : [];
 
     const response = await openai.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-      instructions: `
-You are EvoMind AI, a friendly personal learning companion.
 
-Your job is to help students:
-- learn programming and technology
-- understand difficult concepts simply
-- create realistic study plans
-- stay motivated
-- break big goals into small tasks
-- prepare for interviews and exams
-- improve consistency
+      instructions: `
+You are EvoMind AI, a friendly personal AI learning companion.
+
+Help students with:
+- Programming and technology
+- Difficult concepts
+- Study plans
+- Coding problems
+- Interview preparation
+- Exam preparation
+- Motivation and consistency
+- Breaking large goals into small tasks
 
 Rules:
-1. Be supportive but practical.
-2. Explain technical topics in simple language.
+1. Explain things simply and clearly.
+2. Give practical and actionable answers.
 3. Use examples when useful.
-4. Do not make the answer unnecessarily long.
-5. If the student asks for a study plan, make it actionable.
-6. If the student asks coding questions, provide correct and beginner-friendly code.
+4. Keep answers reasonably concise.
+5. For coding questions, give beginner-friendly and correct code.
+6. Be supportive and encouraging.
 7. Never reveal API keys or private server information.
-8. Address the user naturally as a student/learner.
-      `,
+`,
+
       input: [
         ...safeHistory,
         {
@@ -83,6 +85,7 @@ Rules:
           content: message.trim().slice(0, 8000)
         }
       ],
+
       max_output_tokens: 1200
     });
 
@@ -92,7 +95,7 @@ Rules:
 
     res.json({
       success: true,
-      reply
+      reply: reply
     });
 
   } catch (error) {
@@ -105,22 +108,7 @@ Rules:
   }
 });
 
-/* --------------------------------
-   SERVE FRONTEND
--------------------------------- */
-
-const frontendPath = path.join(__dirname, "..");
-
-app.use(express.static(frontendPath));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
-
-/* --------------------------------
-   START SERVER
--------------------------------- */
-
-app.listen(PORT, () => {
-  console.log(`EvoMind AI running on port ${PORT}`);
+// Start server
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`EvoMind AI backend running on port ${PORT}`);
 });
